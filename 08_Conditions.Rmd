@@ -7,7 +7,7 @@
 
 ## Introduction
 
-What are conditions? Problems that happen in functions:
+Conditions are problems that arise from functions. There are three types of conditions:
 
 - Error
 - Warning
@@ -23,9 +23,10 @@ As a function consumer, one can handle them--for example, react or ignore.
 
 Three types of conditions:
 
-- `r emoji::emoji("x")` **Errors.** Problem arose, and the function cannot continue. 
-- `r emoji::emoji("warning")` **Warnings.** Problem arose, but the function can continue, if only partially.
-- `r emoji::emoji("speech_balloon")` **Messages.** Something happened, and the user should know.
+- `r emoji::emoji("x")` **Errors:** They are the most severe and indicate that there is a problem, and the function cannot continue.
+- `r emoji::emoji("warning")` **Warnings:** They are less severe and indicate that a problem arose, but the function can continue partially.
+- `r emoji::emoji("speech_balloon")` **Messages:** They are the mildeset and indicate that something happened that the user should know.
+- `r emoji::emoji("stop")` **Interupt:** They indicate that the user has intervened and stopped execution by pressing Escape, Ctrl+Break, or Ctrl+C (depending on the platform).
 
 ### `r emoji::emoji("x")` Errors
 
@@ -37,34 +38,36 @@ stop("... in the name of love...")
 
 # with rlang
 rlang::abort("...before you break my heart...")
-
-# with base R; without call
-stop("... think it o-o-over...", call. = FALSE)
 ```
+
 Composing error messages
 
 - Mechanics.
   - `stop()` pastes together arguments
 ```{r}
 some_val <- 1
-stop("Your value is: ", some_val, call. = FALSE)
+stop("Your value is: ", some_val)
 ```
   - `abort()` requires `{glue}`
 ```{r}
 some_val <- 1
 rlang::abort(glue::glue("Your value is: {some_val}"))
 ```
-- Style. See [here](http://style.tidyverse.org/error-messages.html).
+
+- [The tidyverse styleguide](http://style.tidyverse.org/error-messages.html) has more general principles.
 
 ### `r emoji::emoji("warning")` Warnings
 
-May have multiple warnings per call
+Warnings signal that something has gone wrong, but the code has been able to recover and continue.
 
 ```{r}
 warn <- function() {
+  print("1")
   warning("This is your first warning")
+  print("2")
   warning("This is your second warning")
-  warning("This is your LAST warning")
+  print("3")
+  warning("This is your third warning")
 }
 ```
 
@@ -74,24 +77,11 @@ Print all warnings once call is complete.
 warn()
 ```
 
-Like errors, `warning()` has
+- To make warnings appear immediately, set `options(warn = 1)`.
+- To turn warnings into errors, set `options(warn = 2)`.
+- To restore default behavior, set `options(warn = 0)`.
 
-- a call argument
-- an `{rlang}` analog
-
-```{r}
-# base R
-# ... with call (implicitly .call = TRUE)
-warning("Warning")
-# ... with call suppressed
-warning("Warning", call. = FALSE)
-
-# rlang
-# note: call suppressed by default
-rlang::warn("Warning")
-```
-
-(Hadley's) advice on usage:
+Advice on Usage of Warnings:
 
 - Err on the side of errors. In other words, error rather than warn.
 - But warnings make sense in a few cases:
@@ -100,29 +90,60 @@ rlang::warn("Warning")
 
 ### `r emoji::emoji("speech_balloon")` Messages
 
+Messages tell the user that you’ve done something on their behalf.
+
 Mechanics:
 
 - Issued immediately
 - Do not have a call argument
 
-Style:
+Best practices for Messages:
 
-Messages are best when they inform about:
+- Tell the user about a default argument being used. For ex, ggplot2 reports the number of bins used if you don't supply `binwidth`.
+- Tell the user what's happening. For ex, when writing to a database or calling a web API. it's useful to provide status messages to the user.
+- When writing a package, you want to display a message when the package is loaded (`.onAttach()`). You must use `packageStartupMessage()`. 
 
-- Default arguments
-- Status updates of for functions used primarily for side-effects (e.g., interaction with web API, file downloaded, etc.)
-- Progress of long-running process (in the absence of a status bar).
-- Package loading message (e.g., attaching package, objects masked)
+8.2.4 Exercises
+
+1. Write a wrapper around `file.remove()` that throws an error if the file to be deleted does not exist.
+```{r}
+file_remove_error <- function(x) {
+  if(!file.exists(x)) stop("File does not exist.")
+  
+  file.remove(x)
+}
+```
+
+2. What does the `appendLF` argument to `message()` do? How is it related to `cat()`?
+
+The appendLF argument automatically appends a new line to the message. The same achieved can be achieved for `cat()` via setting its `sep` argument to `\n`.
+
+```{r}
+multi_msg <- function() {
+  message("Line 1", appendLF = TRUE)
+  message("Line 2", appendLF = FALSE)
+  message("Line 3")
+}
+multi_msg()
+
+multi_cat <- function() {
+  cat("Line 1", sep = "\n")
+  cat("Line 2")
+}
+multi_cat()
+```
+
+
 
 ## Ignoring conditions
 
-A few ways:
+A few ways to handle conditions is to ignore them:
 
-- `try()`
-- `suppressWarnings()`
-- `suppressMessages()`
+- Ignore errors with `try()`
+- Ignore warnings with `suppressWarnings()`
+- Ignore messages with `suppressMessages()`.
 
-### `try()`
+### Ignore Errors with `try()`
 
 What it does:
 
@@ -156,8 +177,8 @@ What it does:
 - Supresses all warnings (messages)
 
 ```{r}
-# suppress warnings (from our `warn()` function above)
-suppressWarnings(warn())
+# suppress warnings
+suppressWarnings(warning("This is a suppressed warning"))
 
 # suppress messages
 many_messages <- function() {
